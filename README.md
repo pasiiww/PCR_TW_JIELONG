@@ -2,4 +2,4 @@
 
 lib: PIL numpy opencv-python pypinyin
 
-在zmain设置最开始的字 运行即可
+just run PCRJL.py
