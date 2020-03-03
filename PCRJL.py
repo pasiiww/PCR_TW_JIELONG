@@ -40,12 +40,13 @@ if os.path.exists('goal.txt'):
     goal = open('goal.txt',encoding='utf-8')
     dest = goal.readline()
     d = dest.split(" ")
+    #print(dest,d)
     for i in d:
         if i in same2:
             i = 'same'
         if i in xiuzhen:
             i = xiuzhen[i]
-        if i != ' ':
+        if len(i) :
             dests.append(i)
         #dest = goal.readline()
     goal.close()
