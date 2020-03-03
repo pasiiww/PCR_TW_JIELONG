@@ -28,7 +28,7 @@ def initlize():
 
 
 xiuzhen = {
-'iu':'ou' ,'uen':'un','ui':'uei',
+'iu':'ou' ,'uen':'un','ui':'uei','ueng':'eng',
 've':'yue','van':'yuan','vn':'yun','r':'er'
 }
 same2 = {'zhi':'jh','chi':'ch','shi':'sh','ri':'r','zi':'z','ci':'c','si':'s'}
@@ -186,8 +186,7 @@ def anaytext(text):
         p = xiuzhen[a[-1]]
     
     if p not in  yuntoicron:
-        #print()
-        text = input("好像没找到这个字的接龙，要不换一个吧\n")
+        text = input("好像没找到这个音: " + p + "的接龙，要不换一个吧\n")
         return anaytext(text)
     return text
 
