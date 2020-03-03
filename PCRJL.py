@@ -1,11 +1,12 @@
 
-
-
 from pypinyin import lazy_pinyin, Style
 from listm import yuntop,ptoyun,listma,idicon
 yuntop['ㄩ'] = 'v'
 yuntoicron = {}
 same = ['jh','ch','sh','r','z','c','s']
+
+last_pinyin = None
+
 def initlize():
     
     for i in listma:
@@ -27,13 +28,30 @@ def initlize():
 
 
 xiuzhen = {
-'iu':'ou' ,'uen':'un',
+'iu':'ou' ,'uen':'un','ui':'uei',
 've':'yue','van':'yuan','vn':'yun','r':'er'
 }
 same2 = {'zhi':'jh','chi':'ch','shi':'sh','ri':'r','zi':'z','ci':'c','si':'s'}
 
 
+dests = []
+import os
+if os.path.exists('goal.txt'):
+    goal = open('goal.txt',encoding='utf-8')
+    dest = goal.readline()
+    d = dest.split(" ")
+    for i in d:
+        if i in same2:
+            i = 'same'
+        if i in xiuzhen:
+            i = xiuzhen[i]
+        if i != ' ':
+            dests.append(i)
+        #dest = goal.readline()
+    goal.close()
+
 def trans_text_tolist(text,pinyin=False):
+    global last_pinyin
     if pinyin:
         if text in same:
             return yuntoicron['same']
@@ -48,7 +66,8 @@ def trans_text_tolist(text,pinyin=False):
         p = 'same'
     elif a[-1] in xiuzhen:
         p = xiuzhen[a[-1]]
-    
+    if last_pinyin == None:
+        last_pinyin = p
     return yuntoicron[p]
    
 
@@ -116,21 +135,32 @@ def text_border(draw, x, y, text, shadowcolor, fillcolor):
     # now draw the text over it
     draw.text((x, y), text, font=font, fill= fillcolor)
 
-def get(text,pinyin=False,drawmean = True):
+import random
+def get(text,pinyin=False,drawmean = True,shuff = False):
+    global dests
     x = trans_text_tolist(text,pinyin)
+    if shuff:
+        random.shuffle(x)
+    if len(dests):
+        x.sort(key=lambda i:i[1] in dests or i[2] in dests,reverse = True)
     imgs = []
     pinyin = []
     mean = []
     for i in x:
         img = get_single_icon(i[0])
-        if drawmean:
+        if drawmean and len(dests) == 0:
             draw = ImageDraw.Draw(img)
-            
             text_border(draw,2,2,i[2][:3],(255,250,205),(0,0,0))
             text_border(draw,56,56,i[2][-1],(255,250,205),(0,0,0))
+        elif i[1] in dests or i[2] in dests:
+            draw = ImageDraw.Draw(img)
+            text_border(draw,2,2,i[2][:3],(255,250,205),(0,0,0))
+            text_border(draw,56,56,i[2][-1],(255,250,205),(0,0,0))
+
         imgs.append(img)
         pinyin.append(i[1])
         mean.append(i[2])
+
     retires_box = (0+2,944+2,0+78,944+78)
     retires = im.crop(retires_box)
     draw = ImageDraw.Draw(retires)
@@ -169,10 +199,10 @@ img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR)
 
 def show(text):
     global pic,img,pinyin
-
+    global last_pinyin
     def MouseEvent(event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
-            global pic,img,pinyin
+            global pic,img,pinyin,last_pinyin
             #print(pinyin)
             #print(x,y)
             width, height = 76,76
@@ -192,7 +222,12 @@ def show(text):
                 return
             else:
                 next_text = pinyin[n]
-                pic,pinyin,mean = get(next_text,True)
+                if next_text == last_pinyin:
+                    pic,pinyin,mean = get(next_text,True,shuff=True)
+                else:
+                    pic,pinyin,mean = get(next_text,True)
+                    last_pinyin = next_text
+
                 img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR)  
     
     cv2.namedWindow('test')
