@@ -11,6 +11,7 @@ same = ['jh','ch','sh','r','z','c','s']
 last_pinyin = None
 returnpy = None
 lastadd = None
+JIETOU = 0
 def initlize():
     
     for i in listma:
@@ -65,12 +66,16 @@ if os.path.exists('clicked.json'):
     f.close()
     index = 0
     for i in fjson['data']:
-        nametoindex[i['name']] = index
+        if i['name'] == '接頭霸王' and i['clicked'] == True:
+            JIETOU = 1
+        nametoindex[i['name']+str(i["iconID"])] = index
         index += 1
         if 'clicked' in i and i['clicked'] == True:
-            clicked.add(i['name'])
+            clicked.add(i['name']+str(i["iconID"]))
 
-print("图鉴已收集: "+str(len(clicked)))
+print("图鉴已收集: "+str(len(clicked)-JIETOU))
+
+
 def trans_text_tolist(text,pinyin=False):
     global last_pinyin
     if pinyin:
@@ -105,24 +110,27 @@ def get_single_icon(id_):
                     
     #region.show()
 
-def image_merge(images): 
+def image_merge(images,wd = 5,fix_size = None): 
     width, height = 76,76
     nums = len(images)
-    if nums > 5:
-        new_width = 5 * width
-        new_height = int(0.99999 + nums/5) * height
+    if nums > wd:
+        new_width = wd * width
+        new_height = int(0.99999 + nums/wd) * height
         
     else:
         new_width = nums * width
         new_height = height
 
-    new_img = Image.new('RGB', (new_width, new_height), (255,255,255)) 
+    if fix_size:
+        new_img = Image.new('RGB', fix_size, (255,255,255)) 
+    else:
+        new_img = Image.new('RGB', (new_width, new_height), (255,255,255)) 
 
     x = y = 0
     for img in images: 
         new_img.paste(img, (x, y)) 
         x += width 
-        if x >= width * 5:
+        if x >= width * wd:
             x = 0
             y += height
 
@@ -163,7 +171,7 @@ def get(text,pinyin=False,drawmean = True,shuff = False):
     if len(dests):
         x.sort(key=lambda i:i[1] in dests or i[2] in dests,reverse = True)
     else:
-        x.sort(key=lambda i:i[2] in clicked)
+        x.sort(key=lambda i:i[2]+i[0] in clicked)
     imgs = []
     pinyin = []
     mean = []
@@ -177,13 +185,13 @@ def get(text,pinyin=False,drawmean = True,shuff = False):
             draw = ImageDraw.Draw(img)
             text_border(draw,2,2,i[2][:3],(255,250,205),(0,0,0))
             text_border(draw,56,56,i[2][-1],(255,250,205),(0,0,0))
-        if i[2] in clicked:
+        if i[2]+i[0] in clicked:
             draw = ImageDraw.Draw(img)
             #text_border(draw,2,2,i[2][:3],(255,250,205),(0,0,0))
             text_border(draw,2,22,"〇",(255,250,205),(254,67,101))
         imgs.append(img)
         pinyin.append(i[1])
-        mean.append(i[2])
+        mean.append(i[2] + i[0])
 
     retires_box = (0+2,944+2,0+78,944+78)
     retires = im.crop(retires_box)
@@ -203,7 +211,59 @@ def get(text,pinyin=False,drawmean = True,shuff = False):
     #print(pinyin)
     return image_merge(imgs),pinyin,mean
 
+wdsize = 10
+def checkclicked(startindex = 0,one_page_num = 50):
+    imgs = []
+    ind = startindex
+    while (ind < len(fjson['data'])) and (ind < startindex + one_page_num):
+        i = fjson['data'][ind]
+        id_ = i['iconID']
+        name_ = i['name']
+        
+        clicked_ = (name_ + str(id_) in clicked)
+        icon = get_single_icon(str(id_) )
+        draw = ImageDraw.Draw(icon)
+        
+        if clicked_:
+            text_border(draw,2,2,name_[:3],(255,250,205),(0,0,0))
+            text_border(draw,2,22,name_[3:],(255,250,205),(0,0,0))
+            
+            text_border(draw,56,56,"〇",(255,250,205),(254,67,101))
+        else:
+            text_border(draw,2,2,name_[:3],(255,250,205),(155,155,155))
+            text_border(draw,2,22,name_[3:],(255,250,205),(155,155,155))
+        imgs.append(icon)
+        ind += 1
 
+    retires_box = (0+2,944+2,0+78,944+78)
+    retires = im.crop(retires_box)
+    draw = ImageDraw.Draw(retires)
+    if ind < len(fjson['data']):
+        text_border(draw,10,30,"下一页",(255,250,205),(0,0,0))
+    else:
+        text_border(draw,10,30,"下一页",(255,250,205),(155,155,155))
+        
+    imgs.append(retires)
+
+    retires_box = (0+2,944+2,0+78,944+78)
+    retires = im.crop(retires_box)
+    draw = ImageDraw.Draw(retires)
+    if ind > one_page_num:
+        text_border(draw,10,30,"上一页",(255,250,205),(0,0,0))
+    else:
+        text_border(draw,10,30,"上一页",(255,250,205),(155,155,155))
+        
+    imgs.append(retires)
+    retires_box = (0+2,944+2,0+78,944+78)
+    retires = im.crop(retires_box)
+    draw = ImageDraw.Draw(retires)
+    
+    text_border(draw,20,30,"保存",(255,250,205),(0,0,0))
+    
+    imgs.append(retires)
+
+    return image_merge(imgs,wdsize,(76 * wdsize , 76 * int((one_page_num+3)/wdsize+0.99))),ind
+    
 
 def anaytext(text):
     a = lazy_pinyin(text,Style.FINALS)
@@ -220,19 +280,16 @@ def anaytext(text):
         return anaytext(text)
     return text
 
-print("请输入开始的字,之后按任意键退出")
-text = input()
-text = anaytext(text)
-pic,pinyin,mean = get(text)
-img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR)  
 
 
+
+pic,pinyin,mean,img = None,None,None,None
 def show(text):
-    global pic,img,pinyin,mean,returnpy
+    global pic,img,pinyin,mean,returnpy,img
     global last_pinyin,lastadd
     def MouseEvent(event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
-            global pic,img,pinyin,last_pinyin,mean,returnpy,lastadd
+            global pic,img,pinyin,last_pinyin,mean,returnpy,lastadd,img
             #print(pinyin)
             #print(x,y)
             width, height = 76,76
@@ -240,9 +297,9 @@ def show(text):
             xn = int(x/width)
             n = yn * 5 + xn 
             if n == len(pinyin):
-
+                lastadd = None
+                returnpy = None
                 f = open('clicked.json',encoding='utf-8',mode = 'w')
-                #fjson = json.load(f)
                 for i in clicked:
                     fjson['data'][nametoindex[i]]['clicked'] = True
                 json.dump(fjson,f,ensure_ascii=False,indent=4)
@@ -255,13 +312,15 @@ def show(text):
                 cv2.namedWindow('test')
                 cv2.setMouseCallback('test', MouseEvent) 
                 pic,pinyin,mean = get(text)
+                last_pinyin  = text
                 img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR)  
             elif n == len(pinyin) + 1:
                 if lastadd:
                     clicked.remove(lastadd)
+                lastadd = None
                 last_pinyin = returnpy
                 returnpy = None
-                pic,pinyin,mean = get(last_pinyin,True)
+                pic,pinyin,mean = get(last_pinyin,False)
                 img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR)  
                 
                 return
@@ -301,7 +360,81 @@ def show(text):
     
     cv2.destroyAllWindows()
 
+Flag = True
+start_index = 0
+returnind = 0
+one_page_num = 57
+def showalllist():
+    global start_index,wdsize,returnind,img,Flag
+    def MouseEvent(event, x, y, flags, param):
+        global start_index,one_page_num,wdsize,returnind,img,Flag
+        if event == cv2.EVENT_LBUTTONDOWN:
+            width, height = 76,76
+            yn = int(y/height)
+            xn = int(x/width)
+            n = yn * wdsize + xn 
+            if n == returnind - start_index:
+                start_index += one_page_num
+                pic, returnind = checkclicked(start_index,one_page_num)
+                img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR) 
+                return 
+            elif n == returnind + 1 - start_index:
+                start_index -= one_page_num
+                pic, returnind = checkclicked(start_index,one_page_num)
+                img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR)  
+                return
+            elif n == returnind + 2 -start_index:
+                Flag = False
+                #text = anaytext(text)
+                #show(text)
+                return
+            elif n > returnind + 3 - start_index:
+                return
+            else:
+                
+                index = start_index + n
+                icon = fjson['data'][index]
+                
+                if icon['name'] + str(icon['iconID']) not in clicked:
+                    print(icon["name"],'add')
+                    clicked.add(icon["name"])
+                    fjson['data'][index]['clicked'] = True
+                elif icon['name']+ str(icon['iconID']) in clicked:
+                    print(icon["name"],'remove')
+                    clicked.remove(icon["name"])
+                    fjson['data'][index]['clicked'] = False
+                pic, returnind = checkclicked(start_index,one_page_num)
+                img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR)  
+    
+    cv2.namedWindow('test')
+    cv2.setMouseCallback('test', MouseEvent) 
+    pic, returnind = checkclicked(0,one_page_num)
+    img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR) 
 
+    while Flag == True:
+        cv2.imshow('test', img)
+        if cv2.waitKey(1) != -1 :  
+            break
+
+    f = open('clicked.json',encoding='utf-8',mode = 'w')
+    json.dump(fjson,f,ensure_ascii=False,indent=4)
+    f.close()
+    cv2.destroyAllWindows()
+    return
+
+print("请输入开始的字,之后按任意键退出,输入1设置已收集的图鉴（回车结束）")
+text = input()
+if text[0] == '1':
+    print("请选择已经开通的图鉴")
+    showalllist()
+    if "接頭霸王20055" in clicked:
+        JIETOU = 1
+    print("图鉴已收集: "+str(len(clicked)-JIETOU))
+    text = input("请输入开始的字/韵母：")
+    
+text = anaytext(text)
+pic,pinyin,mean = get(text)
+img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR)  
 show(text)
 
 
