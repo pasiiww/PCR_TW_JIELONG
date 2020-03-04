@@ -150,6 +150,8 @@ def get(text,pinyin=False,drawmean = True,shuff = False):
         random.shuffle(x)
     if len(dests):
         x.sort(key=lambda i:i[1] in dests or i[2] in dests,reverse = True)
+    else:
+        x.sort(key=lambda i:i[2] in clicked)
     imgs = []
     pinyin = []
     mean = []
