@@ -66,7 +66,7 @@ if os.path.exists('clicked.json'):
     f.close()
     index = 0
     for i in fjson['data']:
-        if i['name'] == '接頭霸王' and i['clicked'] == True:
+        if i['name'] == '接頭霸王' and 'clicked' in i and i['clicked'] == True:
             JIETOU = 1
         nametoindex[i['name']+str(i["iconID"])] = index
         index += 1
@@ -266,6 +266,9 @@ def checkclicked(startindex = 0,one_page_num = 50):
     
 
 def anaytext(text):
+    if not text:
+        text = input()
+        return anaytext(text)
     a = lazy_pinyin(text,Style.FINALS)
     b = lazy_pinyin(text)
     #print(a[-1],b[-1])
@@ -397,11 +400,11 @@ def showalllist():
                 
                 if icon['name'] + str(icon['iconID']) not in clicked:
                     print(icon["name"],'add')
-                    clicked.add(icon["name"])
+                    clicked.add(icon['name'] + str(icon['iconID']))
                     fjson['data'][index]['clicked'] = True
                 elif icon['name']+ str(icon['iconID']) in clicked:
                     print(icon["name"],'remove')
-                    clicked.remove(icon["name"])
+                    clicked.remove(icon['name'] + str(icon['iconID']))
                     fjson['data'][index]['clicked'] = False
                 pic, returnind = checkclicked(start_index,one_page_num)
                 img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR)  
@@ -424,7 +427,9 @@ def showalllist():
 
 print("请输入开始的字,之后按任意键退出,输入1设置已收集的图鉴（回车结束）")
 text = input()
-if text[0] == '1':
+while not text:
+    text = input()
+if text and text[0] == '1':
     print("请选择已经开通的图鉴")
     showalllist()
     if "接頭霸王20055" in clicked:
