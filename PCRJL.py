@@ -2,12 +2,15 @@ import cv2
 import numpy
 from pypinyin import lazy_pinyin, Style
 from listm import yuntop,ptoyun,listma,idicon
+import json
+
 yuntop['ㄩ'] = 'v'
 yuntoicron = {}
 same = ['jh','ch','sh','r','z','c','s']
 
 last_pinyin = None
-
+returnpy = None
+lastadd = None
 def initlize():
     
     for i in listma:
@@ -52,11 +55,22 @@ if os.path.exists('goal.txt'):
         #dest = goal.readline()
     goal.close()
 
+
+nametoindex = {}
 clicked = set()
-if os.path.exists('clicked.npy'):
-    clicked = numpy.load('clicked.npy')
-    clicked = clicked[()]
-    
+fjson = None
+if os.path.exists('clicked.json'):
+    f = open('clicked.json',encoding='utf-8',mode = 'r')
+    fjson = json.load(f )
+    f.close()
+    index = 0
+    for i in fjson['data']:
+        nametoindex[i['name']] = index
+        index += 1
+        if 'clicked' in i and i['clicked'] == True:
+            clicked.add(i['name'])
+
+print("图鉴已收集: "+str(len(clicked)))
 def trans_text_tolist(text,pinyin=False):
     global last_pinyin
     if pinyin:
@@ -77,8 +91,6 @@ def trans_text_tolist(text,pinyin=False):
         last_pinyin = p
     return yuntoicron[p]
    
-
-
 
 
 from PIL import Image
@@ -144,7 +156,7 @@ def text_border(draw, x, y, text, shadowcolor, fillcolor):
 
 import random
 def get(text,pinyin=False,drawmean = True,shuff = False):
-    global dests
+    global dests,returnpy
     x = trans_text_tolist(text,pinyin)
     if shuff:
         random.shuffle(x)
@@ -179,6 +191,14 @@ def get(text,pinyin=False,drawmean = True,shuff = False):
     text_border(draw,20,20,"重新",(255,250,205),(0,0,0))
     text_border(draw,20,40,"开局",(255,250,205),(0,0,0))
     imgs.append(retires)
+    if returnpy:
+        #print(returnpy)
+        return_box = (0+2,944+2,0+78,944+78)
+        returnb = im.crop(retires_box)
+        draw = ImageDraw.Draw(returnb)
+        text_border(draw,20,20,"返回",(255,250,205),(0,0,0))
+        text_border(draw,20,40,"上层",(255,250,205),(0,0,0))
+        imgs.append(returnb)
     #retires.show()
     #print(pinyin)
     return image_merge(imgs),pinyin,mean
@@ -208,11 +228,11 @@ img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR)
 
 
 def show(text):
-    global pic,img,pinyin,mean
-    global last_pinyin
+    global pic,img,pinyin,mean,returnpy
+    global last_pinyin,lastadd
     def MouseEvent(event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
-            global pic,img,pinyin,last_pinyin,mean
+            global pic,img,pinyin,last_pinyin,mean,returnpy,lastadd
             #print(pinyin)
             #print(x,y)
             width, height = 76,76
@@ -220,6 +240,14 @@ def show(text):
             xn = int(x/width)
             n = yn * 5 + xn 
             if n == len(pinyin):
+
+                f = open('clicked.json',encoding='utf-8',mode = 'w')
+                #fjson = json.load(f)
+                for i in clicked:
+                    fjson['data'][nametoindex[i]]['clicked'] = True
+                json.dump(fjson,f,ensure_ascii=False,indent=4)
+                f.close()
+
                 print("请输入：")
                 cv2.destroyAllWindows()
                 text = input()
@@ -228,11 +256,26 @@ def show(text):
                 cv2.setMouseCallback('test', MouseEvent) 
                 pic,pinyin,mean = get(text)
                 img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR)  
-            elif n > len(pinyin):
+            elif n == len(pinyin) + 1:
+                if lastadd:
+                    clicked.remove(lastadd)
+                last_pinyin = returnpy
+                returnpy = None
+                pic,pinyin,mean = get(last_pinyin,True)
+                img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR)  
+                
+                return
+            elif n > len(pinyin) + 1:
                 return
             else:
-                clicked.add(mean[n])
-                numpy.save('clicked',clicked)
+                if mean[n] not in clicked:
+                    lastadd = mean[n]
+                    clicked.add(mean[n])
+                else:
+                    lastadd = None
+                
+                returnpy = last_pinyin
+
                 next_text = pinyin[n]
                 if next_text == last_pinyin:
                     pic,pinyin,mean = get(next_text,True,shuff=True)
@@ -248,8 +291,14 @@ def show(text):
     while True:
         cv2.imshow('test', img)
         if cv2.waitKey(1) != -1 :  
+            f = open('clicked.json',encoding='utf-8',mode = 'w')
+            #fjson = json.load(f)
+            for i in clicked:
+                fjson['data'][nametoindex[i]]['clicked'] = True
+            json.dump(fjson,f,ensure_ascii=False,indent=4)
+            f.close()
             break
-        
+    
     cv2.destroyAllWindows()
 
 
