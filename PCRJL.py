@@ -1,4 +1,5 @@
-
+import cv2
+import numpy
 from pypinyin import lazy_pinyin, Style
 from listm import yuntop,ptoyun,listma,idicon
 yuntop['ㄩ'] = 'v'
@@ -51,6 +52,11 @@ if os.path.exists('goal.txt'):
         #dest = goal.readline()
     goal.close()
 
+clicked = set()
+if os.path.exists('clicked.npy'):
+    clicked = numpy.load('clicked.npy')
+    clicked = clicked[()]
+    
 def trans_text_tolist(text,pinyin=False):
     global last_pinyin
     if pinyin:
@@ -157,7 +163,10 @@ def get(text,pinyin=False,drawmean = True,shuff = False):
             draw = ImageDraw.Draw(img)
             text_border(draw,2,2,i[2][:3],(255,250,205),(0,0,0))
             text_border(draw,56,56,i[2][-1],(255,250,205),(0,0,0))
-
+        if i[2] in clicked:
+            draw = ImageDraw.Draw(img)
+            #text_border(draw,2,2,i[2][:3],(255,250,205),(0,0,0))
+            text_border(draw,2,22,"〇",(255,250,205),(254,67,101))
         imgs.append(img)
         pinyin.append(i[1])
         mean.append(i[2])
@@ -172,8 +181,7 @@ def get(text,pinyin=False,drawmean = True,shuff = False):
     #print(pinyin)
     return image_merge(imgs),pinyin,mean
 
-import cv2
-import numpy
+
 
 def anaytext(text):
     a = lazy_pinyin(text,Style.FINALS)
@@ -198,11 +206,11 @@ img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR)
 
 
 def show(text):
-    global pic,img,pinyin
+    global pic,img,pinyin,mean
     global last_pinyin
     def MouseEvent(event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
-            global pic,img,pinyin,last_pinyin
+            global pic,img,pinyin,last_pinyin,mean
             #print(pinyin)
             #print(x,y)
             width, height = 76,76
@@ -221,6 +229,8 @@ def show(text):
             elif n > len(pinyin):
                 return
             else:
+                clicked.add(mean[n])
+                numpy.save('clicked',clicked)
                 next_text = pinyin[n]
                 if next_text == last_pinyin:
                     pic,pinyin,mean = get(next_text,True,shuff=True)
