@@ -378,11 +378,15 @@ def showalllist():
             n = yn * wdsize + xn 
             if n == returnind - start_index:
                 start_index += one_page_num
+                if start_index >= len(fjson['data']):
+                    start_index = 0
                 pic, returnind = checkclicked(start_index,one_page_num)
                 img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR) 
                 return 
             elif n == returnind + 1 - start_index:
                 start_index -= one_page_num
+                if start_index < 0 :
+                    start_index = len(fjson['data']) - one_page_num 
                 pic, returnind = checkclicked(start_index,one_page_num)
                 img = cv2.cvtColor(numpy.asarray(pic),cv2.COLOR_RGB2BGR)  
                 return
