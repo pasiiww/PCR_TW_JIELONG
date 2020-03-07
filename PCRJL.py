@@ -353,10 +353,10 @@ def show(text):
     while True:
         cv2.imshow('test', img)
         if cv2.waitKey(1) != -1 :  
-            f = open('clicked.json',encoding='utf-8',mode = 'w')
             #fjson = json.load(f)
             for i in clicked:
                 fjson['data'][nametoindex[i]]['clicked'] = True
+            f = open('clicked.json',encoding='utf-8',mode = 'w')
             json.dump(fjson,f,ensure_ascii=False,indent=4)
             f.close()
             break
