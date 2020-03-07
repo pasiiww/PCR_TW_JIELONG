@@ -302,9 +302,10 @@ def show(text):
             if n == len(pinyin):
                 lastadd = None
                 returnpy = None
-                f = open('clicked.json',encoding='utf-8',mode = 'w')
+                
                 for i in clicked:
                     fjson['data'][nametoindex[i]]['clicked'] = True
+                f = open('clicked.json',encoding='utf-8',mode = 'w')
                 json.dump(fjson,f,ensure_ascii=False,indent=4)
                 f.close()
 
